@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            text-align: center;
+        }
+        canvas {
+            background-color: #2b2b2b;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+            max-width: 90vw;
+            max-height: 90vh;
+        }
+        h1 {
+            color: #ffffff;
+            margin-bottom: 20px;
+        }
+        .controls {
+            margin-top: 20px;
+            color: #ccc;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="text-4xl font-bold">Interactive Canvas Game</h1>
+    <canvas id="gameCanvas"></canvas>
+    <div class="controls">Use **W, A, S, D** or **Arrow Keys** to move the player.</div>
+
+    <script>
+        window.onload = function() {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // --- Game Variables ---
+            const player = {
+                x: 50,
+                y: 50,
+                size: 20,
+                color: '#4ade80', // green-400
+                speed: 5
+            };
+            const goal = {
+                x: 700,
+                y: 500,
+                size: 40,
+                color: '#f87171' // red-400
+            };
+            let keysPressed = {};
+            let isWin = false;
+
+            // --- Game Setup ---
+            function resizeCanvas() {
+                canvas.width = Math.min(800, window.innerWidth * 0.9);
+                canvas.height = Math.min(600, window.innerHeight * 0.9);
+            }
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            // --- Input Handlers ---
+            document.addEventListener('keydown', (e) => {
+                keysPressed[e.key.toLowerCase()] = true;
+            });
+            document.addEventListener('keyup', (e) => {
+                keysPressed[e.key.toLowerCase()] = false;
+            });
+            
+            // Handle touch controls for mobile
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchEndX = 0;
+            let touchEndY = 0;
+
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            });
+            
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                touchEndX = e.touches[0].clientX;
+                touchEndY = e.touches[0].clientY;
+            });
+            
+            canvas.addEventListener('touchend', () => {
+                const deltaX = touchEndX - touchStartX;
+                const deltaY = touchEndY - touchStartY;
+                const sensitivity = 5;
+
+                // Reset keys based on swipe
+                keysPressed = {};
+                if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > sensitivity) {
+                    if (deltaX > 0) keysPressed['d'] = true; // Right swipe
+                    else keysPressed['a'] = true; // Left swipe
+                } else if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > sensitivity) {
+                    if (deltaY > 0) keysPressed['s'] = true; // Down swipe
+                    else keysPressed['w'] = true; // Up swipe
+                }
+            });
+
+            // --- Game Logic ---
+            function update() {
+                // Move player based on key presses
+                if (keysPressed['w'] || keysPressed['arrowup']) {
+                    player.y -= player.speed;
+                }
+                if (keysPressed['s'] || keysPressed['arrowdown']) {
+                    player.y += player.speed;
+                }
+                if (keysPressed['a'] || keysPressed['arrowleft']) {
+                    player.x -= player.speed;
+                }
+                if (keysPressed['d'] || keysPressed['arrowright']) {
+                    player.x += player.speed;
+                }
+
+                // Keep player within canvas boundaries
+                player.x = Math.max(0, Math.min(canvas.width - player.size, player.x));
+                player.y = Math.max(0, Math.min(canvas.height - player.size, player.y));
+
+                // Check for collision with the goal
+                const distanceX = player.x + player.size / 2 - (goal.x + goal.size / 2);
+                const distanceY = player.y + player.size / 2 - (goal.y + goal.size / 2);
+                const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+                if (distance < (player.size + goal.size) / 2) {
+                    isWin = true;
+                }
+            }
+
+            // --- Drawing Function ---
+            function draw() {
+                // Clear the canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (isWin) {
+                    // Draw win message
+                    ctx.font = '60px Arial';
+                    ctx.fillStyle = '#4ade80';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('You Win!', canvas.width / 2, canvas.height / 2);
+                } else {
+                    // Draw the goal
+                    ctx.fillStyle = goal.color;
+                    ctx.beginPath();
+                    ctx.arc(goal.x + goal.size / 2, goal.y + goal.size / 2, goal.size / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw the player
+                    ctx.fillStyle = player.color;
+                    ctx.fillRect(player.x, player.y, player.size, player.size);
+                }
+            }
+
+            // --- The Game Loop ---
+            function gameLoop() {
+                update();
+                draw();
+                requestAnimationFrame(gameLoop);
+            }
+
+            gameLoop();
+        };
+    </script>
+</body>
+</html>
